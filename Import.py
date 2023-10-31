@@ -25,9 +25,9 @@ for i in range(size):
         props[0,i]=3
 
     props[1,i] = int(filenames[i][29:43])#YYYY mm DD HH MM SS
-    props[2,i] = filenames[i]
-
-sort =props[:,props[1,:].argsort()]
+    props[2,i] = filenames[i]                 #
+                                             #
+sort =props[:,props[1,:].argsort()]         #
 #time ordered array of idexing: filter, datetime, filename 
 
 
