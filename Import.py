@@ -3,6 +3,7 @@ import numpy as np
 import os
 
 mypath = "C:/Users/adamc/Desktop/images/"
+datapath="C:/Users/adamc/Desktop/bigdata/"
 
 from os import walk
 
@@ -31,8 +32,10 @@ sort =props[:,np.lexsort((props[0,:],props[1,:]))]
 
 
 #time ordered array of idexing: filter, datetime, filename 
+numimg = int(size/3)
 #%%
 import matplotlib.pyplot as plt
+%matplotlib inline
 
 indx = 0
 green = plt.imread(mypath+sort[2,indx+2])
@@ -205,7 +208,7 @@ out1 = label2rgb(segments,image,kind="avg",bg_label=0)
 #%%
 #plot the images
 plt.figure(dpi=400)
-plt.imshow(segments)
+plt.imshow(out1)
 plt.axis("off")
 plt.show()
 
@@ -213,7 +216,7 @@ mask = segments > 11
 maskseg = segments.copy()
 maskseg[~mask] = 0
 plt.figure(dpi=400)
-plt.imshow(maskseg)
+plt.imshow(segments)
 plt.axis("off")
 plt.show()
 #%%
@@ -221,14 +224,59 @@ import matplotlib.pyplot as plt
 from PIL import Image, ImageFile
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
-pxstk = np.zeros((3712,3,int(size/3)))
+pxstk = np.zeros((3712,int(size/3),3))
+medimg = np.zeros((3712,3712,3))
+k=1800
 for j in range(int(size/3)):
     i=j*3
-    redpx = plt.imread(mypath+sort[2,i])[:,1800]
-    greenpx = plt.imread(mypath+sort[2,i+1])[:,1800]
-    bluepx = plt.imread(mypath+sort[2,i+2])[:,1800]
-    pxstk[:,:,j]=np.array([redpx,greenpx,bluepx]).T
+    redpx = plt.imread(mypath+sort[2,i])[:,k]
+    greenpx = plt.imread(mypath+sort[2,i+1])[:,k]
+    bluepx = plt.imread(mypath+sort[2,i+2])[:,k]
+    pxstk[:,j,:]=np.array([redpx,greenpx,bluepx]).T
     #print(np.round(i*3/size*100))
+medimg[:,k] = np.median(pxstk,axis=1)
+print(())
+
+#%%
+import matplotlib.pyplot as plt
+#error between 525 and 530 (x3)
+from PIL import Image, ImageFile
+ImageFile.LOAD_TRUNCATED_IMAGES = True
+meanimg = np.loadtxt(datapath+"meanimg.np").reshape((3712,3712,3)).copy()
+imgstk = np.zeros((3712,3712,3))
+for j in range(100):
+    i = j*3
+    diffr = plt.imread(mypath+sort[2,i])
+    diffg = plt.imread(mypath+sort[2,i+1])
+    diffb = plt.imread(mypath+sort[2,i+2])
+    curdiff = np.array([diffr,diffg,diffb]).transpose(1,2,0)-meanimg
+
+    imgstk=imgstk+curdiff
+    if j%5==0:
+        print(j)
+
+imgvar = imgstk**2/(numimg)
+#%%
+std = np.sqrt(abs(imgvar))
+meandiff = meanimg.copy()-std
+
+plt.imshow(np.uint8(std))
+print(np.max(meandiff))
+#%%
+testimg = np.array([plt.imread(mypath+sort[2,0]),plt.imread(mypath+sort[2,1]),plt.imread(mypath+sort[2,2])]).transpose(1,2,0)
+
+testthreshold = testimg-meanimg<std*0.3
+thresholdstack = ~np.any(~testthreshold,axis=2)
+cloudremoveall = testimg.copy()
+cloudremoveone = testimg.copy()
+cloudremoveall[~thresholdstack]=0
+cloudremoveone[~testthreshold]=0
+plt.figure(dpi=400)
+plt.imshow(cloudremoveone)
+plt.show()
+plt.figure(dpi=400)
+plt.imshow(cloudremoveall)
+plt.show()      
 
 #%%
 %matplotlib qt
@@ -243,7 +291,7 @@ plt.plot(x,ones*np.median(pxstk[1,:]),color="green")
 plt.plot(x,ones*np.median(pxstk[2,:]),color="blue")
 plt.show()
 #%%
-transpimgplot = np.transpose(pxstk,(2,0,1))
-plt.imshow(np.uint8(transpimgplot),aspect=3712/780)
+transpimgplot = np.transpose(pxstk,(0,2,1))
+plt.imshow(np.uint8(transpimgplot),aspect=780/3712)
 
 
