@@ -191,30 +191,34 @@ plt.imshow(np.uint8(std*255))
 
 #%%====================THRESHOLDING USING STD===================================
 meanimg = np.loadtxt(datapath+"meanimg.np").reshape((3712,3712,3))
-std = np.loadtxt(datapath+"std.np").reshape((3712,3712,3))*255
+stdbase = np.loadtxt(datapath+"std.np").reshape((3712,3712,3))*255
 #%%
+from skimage.filters import gaussian as blur
+std = blur(stdbase,(3,3),mode="reflect")
+
 testimg = np.array([plt.imread(mypath+sort[2,0]),plt.imread(mypath+sort[2,1]),plt.imread(mypath+sort[2,2])]).transpose(1,2,0)
 diffimg = testimg-meanimg
 def threshold(inp,std):
-    redthresh = np.logical_or(inp[:,:,0]>=1*std[:,:,0],inp[:,:,0]<=-1*std[:,:,0])
-    grethresh = np.logical_or(inp[:,:,1]>=0.5*std[:,:,1],False)##inp[:,:,1]<=-std[:,:,1])
-    bluthresh = np.logical_or(inp[:,:,2]>=0.55*std[:,:,2],False)#inp[:,:,2]<=-std[:,:,2])
-    totalthresh = np.any(np.array([redthresh,grethresh,bluthresh]),axis=0)
-    return totalthresh
+    redthresh = np.logical_or(inp[:,:,0]<=-1*std[:,:,0],inp[:,:,0]>=2*std[:,:,1])#,inp[:,:,0]>=10*std[:,:,0])
+    grethresh = np.logical_or(inp[:,:,1]>=0.5*std[:,:,1],inp[:,:,1]<=-2*std[:,:,1])##inp[:,:,1]<=-std[:,:,1])
+    bluthresh = np.logical_or(inp[:,:,2]>=0.5*std[:,:,2],inp[:,:,0]<=-2*std[:,:,1])#inp[:,:,2]<=-std[:,:,2])
+    totthresh = np.any(np.array([redthresh,grethresh,bluthresh]),axis=0)
+    return totthresh
 testthresh = threshold(diffimg,std)
 plt.imshow(np.uint8(std))
 plt.show()
 testimg[testthresh]=0
 plt.figure()
-plt.imshow(testimg)
+plt.imshow(testimg[:,:,:])
 
 
 #%%==========================GENERATE WEEK IMAGES==================================
 meanimg = np.loadtxt(datapath+"meanimg.np").reshape((3712,3712,3)).copy()
-std = np.loeadtxt(datapath+"std.np").reshape((3712,3712,3)).copy()
+std = np.loeadtxt(datapath+"std.np").reshape((3712,3712,3)).copy()*255
+#%%
 weeks=numimg/10
 weekstack = np.zeros((3712,3712,3))
-weekweights = np.ones((3712,3712))
+weekweights = np.zeros((3712,3712))
 #for i in range(weeks):
 for j in range(60):
     indx = 0*10*3+j
@@ -223,24 +227,18 @@ for j in range(60):
                     plt.imread(mypath+sort[2,indx+2])]).transpose(1,2,0)
     print(indx)
     #change this to be the threshold funciton
-    threshold = np.all(dayimg-meanimg<std*0.15,axis=2)
+    mask = threshold(dayimg-meanimg,std)
 
-    dayimg[~threshold]=0
+    dayimg[mask]=0
     weekstack=weekstack+dayimg
 
     changes = np.ones((3712,3712))
-    changes[~threshold]=0
+    changes[mask]=0
     weekweights = weekweights + changes
 
-weekimg = weekstack/np.repeat(weekweights[:,:,np.newaxis],3,axis=2)
-
 badpx = np.argwhere(weekweights==1)
-
-#%%
-plt.imshow(np.uint8(weekimg))
-
-
-
+weekweights[weekweights==0]=1
+weekimg = weekstack/np.repeat(weekweights[:,:,np.newaxis],3,axis=2)
 
 #%%==========================SINGLE PIXEL CHANGES========================
 %matplotlib qt
@@ -258,4 +256,56 @@ plt.show()
 transpimgplot = np.transpose(pxstk,(0,2,1))
 plt.imshow(np.uint8(transpimgplot),aspect=780/3712)
 
+#%%==================2D COLOUR HISTOGRAM===============================
+import matplotlib.pyplot as plt
+r=plt.imread(mypath+sort[2,0]).ravel()
+g=plt.imread(mypath+sort[2,1]).ravel()
+b=plt.imread(mypath+sort[2,2]).ravel()
 
+rg,xe1,ye1 =np.histogram2d(np.asarray(r),np.asarray(g),bins=173)
+rb,xe2,ye2 =np.histogram2d(np.asarray(r),np.asarray(b),bins=173)
+gb,xe3,ye3 =np.histogram2d(np.asarray(g),np.asarray(b),bins=173)
+
+plt.imshow(np.log(rg+1),origin="lower")
+plt.show()
+plt.figure()
+plt.imshow(np.log(rb+1),origin="lower")
+plt.show()
+plt.figure()
+plt.imshow(np.log(gb+1),origin="lower")
+plt.show()
+
+#%%
+from PIL import Image, ImageFile
+ImageFile.LOAD_TRUNCATED_IMAGES = True
+pxval = np.zeros((10000,numimg,3))
+for i in range(numimg):
+    indx = i*3
+    pxval[:,i,0]=plt.imread(mypath+sort[2,indx])[1750:1850,1750:1850].ravel()
+    pxval[:,i,1]=plt.imread(mypath+sort[2,indx+1])[1750:1850,1750:1850].ravel()
+    pxval[:,i,2]=plt.imread(mypath+sort[2,indx+2])[1750:1850,1750:1850].ravel()
+#%%
+
+r=pxval[:,:,0].ravel()
+g=pxval[:,:,1].ravel()
+b=pxval[:,:,2].ravel()
+
+rg,xe1,ye1 =np.histogram2d(np.asarray(r),np.asarray(g),bins=173)
+rb,xe2,ye2 =np.histogram2d(np.asarray(r),np.asarray(b),bins=173)
+gb,xe3,ye3 =np.histogram2d(np.asarray(g),np.asarray(b),bins=173)
+
+plt.figure(dpi=400)
+plt.imshow(np.log(rg+1),origin="lower")
+plt.xlabel("r")
+plt.ylabel("g")
+plt.show()
+plt.figure(dpi=400)
+plt.imshow(np.log(rb+1),origin="lower")
+plt.xlabel("r")
+plt.ylabel("b")
+plt.show()
+plt.figure(dpi=400)
+plt.imshow(np.log(gb+1),origin="lower")
+plt.xlabel("g")
+plt.ylabel("b")
+plt.show()
