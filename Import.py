@@ -190,8 +190,8 @@ print(np.max(meandiff))
 #%%====================THRESHOLDING USING STD===================================
 testimg = np.array([plt.imread(mypath+sort[2,0]),plt.imread(mypath+sort[2,1]),plt.imread(mypath+sort[2,2])]).transpose(1,2,0)
 
-testthreshold = testimg-meanimg<std*0.3
-thresholdstack = ~np.any(~testthreshold,axis=2)
+testthreshold = testimg-meanimg<std*0.15
+thresholdstack = np.all(testthreshold,axis=2)
 cloudremoveall = testimg.copy()
 cloudremoveone = testimg.copy()
 cloudremoveall[~thresholdstack]=0
@@ -202,6 +202,39 @@ plt.show()
 plt.figure(dpi=400)
 plt.imshow(cloudremoveall)
 plt.show()      
+
+
+#%%==========================GENERATE WEEK IMAGES==================================
+meanimg = np.loadtxt(datapath+"meanimg.np").reshape((3712,3712,3)).copy()
+weeks=numimg/10
+weekstack = np.zeros((3712,3712,3))
+weekweights = np.ones((3712,3712))
+#for i in range(weeks):
+for j in range(60):
+    indx = 0*10*3+j
+    dayimg=np.array([plt.imread(mypath+sort[2,indx]),
+                        plt.imread(mypath+sort[2,indx+1]),
+                        plt.imread(mypath+sort[2,indx+2])]).transpose(1,2,0)
+    print(indx)
+    #change this to be the threshold funciton
+    threshold = np.all(dayimg-meanimg<std*0.15,axis=2)
+
+    dayimg[~threshold]=0
+    weekstack=weekstack+dayimg
+
+    changes = np.ones((3712,3712))
+    changes[~threshold]=0
+    weekweights = weekweights + changes
+
+weekimg = weekstack/np.repeat(weekweights[:,:,np.newaxis],3,axis=2)
+
+badpx = np.argwhere(weekweights==1)
+
+#%%
+plt.imshow(np.uint8(weekimg))
+
+
+
 
 #%%==========================SINGLE PIXEL CHANGES========================
 %matplotlib qt
