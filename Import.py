@@ -169,7 +169,7 @@ from PIL import Image, ImageFile
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 meanimg = np.loadtxt(datapath+"meanimg.np").reshape((3712,3712,3)).copy()
 imgstk = np.zeros((3712,3712,3))
-for j in range(100):
+for j in range(numimg):
     i = j*3
     diffr = plt.imread(mypath+sort[2,i])
     diffg = plt.imread(mypath+sort[2,i+1])
@@ -181,31 +181,37 @@ for j in range(100):
         print(j)
 
 imgvar = imgstk**2/(numimg)
-#%%=========================PLOT STD===================================
 std = np.sqrt(abs(imgvar))
-meandiff = meanimg.copy()-std
+#%%
+import matplotlib.pyplot as plt
 
-plt.imshow(np.uint8(std))
-print(np.max(meandiff))
+std = np.loadtxt(datapath+"std.np").reshape((3712,3712,3))
+print(np.max(std))
+plt.imshow(np.uint8(std*255))
+
 #%%====================THRESHOLDING USING STD===================================
+meanimg = np.loadtxt(datapath+"meanimg.np").reshape((3712,3712,3))
+std = np.loadtxt(datapath+"std.np").reshape((3712,3712,3))*255
+#%%
 testimg = np.array([plt.imread(mypath+sort[2,0]),plt.imread(mypath+sort[2,1]),plt.imread(mypath+sort[2,2])]).transpose(1,2,0)
-
-testthreshold = testimg-meanimg<std*0.15
-thresholdstack = np.all(testthreshold,axis=2)
-cloudremoveall = testimg.copy()
-cloudremoveone = testimg.copy()
-cloudremoveall[~thresholdstack]=0
-cloudremoveone[~testthreshold]=0
-plt.figure(dpi=400)
-plt.imshow(cloudremoveone)
+diffimg = testimg-meanimg
+def threshold(inp,std):
+    redthresh = np.logical_or(inp[:,:,0]>=1*std[:,:,0],inp[:,:,0]<=-1*std[:,:,0])
+    grethresh = np.logical_or(inp[:,:,1]>=0.5*std[:,:,1],False)##inp[:,:,1]<=-std[:,:,1])
+    bluthresh = np.logical_or(inp[:,:,2]>=0.55*std[:,:,2],False)#inp[:,:,2]<=-std[:,:,2])
+    totalthresh = np.any(np.array([redthresh,grethresh,bluthresh]),axis=0)
+    return totalthresh
+testthresh = threshold(diffimg,std)
+plt.imshow(np.uint8(std))
 plt.show()
-plt.figure(dpi=400)
-plt.imshow(cloudremoveall)
-plt.show()      
+testimg[testthresh]=0
+plt.figure()
+plt.imshow(testimg)
 
 
 #%%==========================GENERATE WEEK IMAGES==================================
 meanimg = np.loadtxt(datapath+"meanimg.np").reshape((3712,3712,3)).copy()
+std = np.loeadtxt(datapath+"std.np").reshape((3712,3712,3)).copy()
 weeks=numimg/10
 weekstack = np.zeros((3712,3712,3))
 weekweights = np.ones((3712,3712))
@@ -213,8 +219,8 @@ weekweights = np.ones((3712,3712))
 for j in range(60):
     indx = 0*10*3+j
     dayimg=np.array([plt.imread(mypath+sort[2,indx]),
-                        plt.imread(mypath+sort[2,indx+1]),
-                        plt.imread(mypath+sort[2,indx+2])]).transpose(1,2,0)
+                    plt.imread(mypath+sort[2,indx+1]),
+                    plt.imread(mypath+sort[2,indx+2])]).transpose(1,2,0)
     print(indx)
     #change this to be the threshold funciton
     threshold = np.all(dayimg-meanimg<std*0.15,axis=2)
