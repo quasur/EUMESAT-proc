@@ -192,43 +192,82 @@ plt.imshow(np.uint8(std*255))
 #%%====================THRESHOLDING USING STD===================================
 meanimg = np.loadtxt(datapath+"meanimg.np").reshape((3712,3712,3))
 stdbase = np.loadtxt(datapath+"std.np").reshape((3712,3712,3))*255
-#%%
+#%%#==========================GENERATE WEEK IMAGES==================================
+import matplotlib.pyplot as plt
+from PIL import Image, ImageFile
+ImageFile.LOAD_TRUNCATED_IMAGES = True
+
+
 from skimage.filters import gaussian as blur
 std = blur(stdbase,(3,3),mode="reflect")
 
 testimg = np.array([plt.imread(mypath+sort[2,0]),plt.imread(mypath+sort[2,1]),plt.imread(mypath+sort[2,2])]).transpose(1,2,0)
 diffimg = testimg-meanimg
 def threshold(inp,std):
-    redthresh = np.logical_or(inp[:,:,0]<=-1*std[:,:,0],inp[:,:,0]>=2*std[:,:,1])#,inp[:,:,0]>=10*std[:,:,0])
+    #crude mask for the red threshold
+    #redthresh = np.logical_or(inp[:,:,0]<=-1*std[:,:,0],inp[:,:,0]>=2*std[:,:,1])#,inp[:,:,0]>=10*std[:,:,0])
     grethresh = np.logical_or(inp[:,:,1]>=0.5*std[:,:,1],inp[:,:,1]<=-2*std[:,:,1])##inp[:,:,1]<=-std[:,:,1])
     bluthresh = np.logical_or(inp[:,:,2]>=0.5*std[:,:,2],inp[:,:,0]<=-2*std[:,:,1])#inp[:,:,2]<=-std[:,:,2])
-    totthresh = np.any(np.array([redthresh,grethresh,bluthresh]),axis=0)
-    return totthresh
-testthresh = threshold(diffimg,std)
-plt.imshow(np.uint8(std))
-plt.show()
-testimg[testthresh]=0
-plt.figure()
-plt.imshow(testimg[:,:,:])
+    gbthresh = np.any(np.array([grethresh,bluthresh]),axis=0)
+    return gbthresh
 
 
-#%%==========================GENERATE WEEK IMAGES==================================
-meanimg = np.loadtxt(datapath+"meanimg.np").reshape((3712,3712,3)).copy()
-std = np.loeadtxt(datapath+"std.np").reshape((3712,3712,3)).copy()*255
-#%%
+#testthresh = threshold(diffimg,std)
+#plt.imshow(np.uint8(std))
+#plt.show()
+#testimg[testthresh]=0
+#plt.figure()
+#plt.imshow(testimg[:,:,:])
+
+
+#meanimg = np.loadtxt(datapath+"meanimg.np").reshape((3712,3712,3)).copy()
+#std = np.loadtxt(datapath+"std.np").reshape((3712,3712,3)).copy()*255
+
 weeks=numimg/10
 weekstack = np.zeros((3712,3712,3))
-weekweights = np.zeros((3712,3712))
-#for i in range(weeks):
-for j in range(60):
-    indx = 0*10*3+j
-    dayimg=np.array([plt.imread(mypath+sort[2,indx]),
-                    plt.imread(mypath+sort[2,indx+1]),
-                    plt.imread(mypath+sort[2,indx+2])]).transpose(1,2,0)
-    print(indx)
-    #change this to be the threshold funciton
-    mask = threshold(dayimg-meanimg,std)
+redval = np.zeros((3712,3712,60),dtype=np.uint8)
+weekweights = np.zeros((3712,3712),dtype=np.uint8)
 
+#first window initial average
+for j in range(60):
+    i = j*3
+    redval[:,:,j]=plt.imread(mypath+sort[2,i]).astype(np.uint8)
+    print(i)
+
+for j in range(60):
+    i = (j+180)*3
+    dayimg=np.array([plt.imread(mypath+sort[2,i]),
+                    plt.imread(mypath+sort[2,i+1]),
+                    plt.imread(mypath+sort[2,i+2])]).transpose(1,2,0)
+    print(j)
+
+
+    #the first window repeats for the first 30 avgs
+    if j <30:
+        movingavg=np.sum(redval,axis=2)/60
+        print(30)
+
+    #middle windows
+    #load in one image at a time and shuttle the others off one by one until the last image is loaded
+    elif j >=30 & j<700:
+        movingavg=np.sum(redval,axis=2)/60
+        redval[:,:,:-1]=redval[:,:,1:]
+        redval[:,:,-1]=plt.imread(mypath+sort[2,i]).astype(np.uint8)
+        print(700)
+
+    #pad the other edge for 30 values
+    elif j >= 700:
+        movingavg=np.sum(redval,axis=2)/60
+        #for i in range(30):
+        print(730)
+
+    reddiff = dayimg[:,:,0]-movingavg
+    rmask = np.logical_or(reddiff<=-2*std[:,:,0],reddiff>=2*std[:,:,1])
+
+    #change this to be the threshold funciton
+    gbmask = threshold(dayimg-meanimg,std)
+
+    mask = np.logical_or(rmask,gbmask)
     dayimg[mask]=0
     weekstack=weekstack+dayimg
 
@@ -237,24 +276,51 @@ for j in range(60):
     weekweights = weekweights + changes
 
 badpx = np.argwhere(weekweights==1)
-weekweights[weekweights==0]=1
-weekimg = weekstack/np.repeat(weekweights[:,:,np.newaxis],3,axis=2)
-
-#%%==========================SINGLE PIXEL CHANGES========================
-%matplotlib qt
-plt.figure(dpi=400)
-x = np.linspace(0,int(2190/3),int(2190/3))
-ones = np.ones(int(2190/3))
-plt.plot(x,pxstk[0,:],color='red',alpha=0.6,linewidth=0.2)
-plt.plot(x,pxstk[1,:],color='green',alpha=0.6,linewidth=0.2)
-plt.plot(x,pxstk[2,:],color='blue',alpha=0.6,linewidth=0.2)
-plt.plot(x,ones*np.median(pxstk[0,:]),color="red")
-plt.plot(x,ones*np.median(pxstk[1,:]),color="green")
-plt.plot(x,ones*np.median(pxstk[2,:]),color="blue")
-plt.show()
+weekweightdiv = weekweights
+weekweightdiv[weekweights==0]=1
+weekimg = weekstack/np.repeat(weekweightdiv[:,:,np.newaxis],3,axis=2)
 #%%
-transpimgplot = np.transpose(pxstk,(0,2,1))
-plt.imshow(np.uint8(transpimgplot),aspect=780/3712)
+%matplotlib inline
+plt.figure(dpi=400)
+wimg = weekimg-np.min(weekimg)
+img= np.uint8(255*wimg/np.max(wimg))
+plt.axis("off")
+plt.imshow(img)
+from PIL import Image
+imsave= Image.fromarray(img)
+imsave.save("month3.png",format="png")
+# %% ================Adapting code to threshold red=============
+import matplotlib.pyplot as plt
+from PIL import Image, ImageFile
+ImageFile.LOAD_TRUNCATED_IMAGES = True
+redval = np.zeros((3712,3712,60),dtype=np.uint8)
+#first window initial average
+if i ==0:
+    indx = i*3
+    redval[:,:,i]=plt.imread(mypath+sort[2,indx]).astype(np.uint8)
+    print(0)
+#the first window repeats for the first 30 avgs
+if i <30:
+    movingavg=np.sum(redval,axis=2)/60
+    print(30)
+
+#middle windows
+#load in one image at a time and shuttle the others off one by one until the last image is loaded
+if i >=30 & i<700:
+    #for i in range(numimg-60):
+    indx=(i+60)*3
+    movingavg=np.sum(redval,axis=2)/60
+    redval[:,:,:-1]=redval[:,:,1:]
+    redval[:,:,-1]=plt.imread(mypath+sort[2,indx]).astype(np.uint8)
+    pxval[i+30]=movingavg[1800,1800]
+    print(700)
+
+#pad the other edges for 30 values
+if i >= 700:
+    movingavg=np.sum(redval,axis=2)/60
+    #for i in range(30):
+    pxval[-30+i]=movingavg[1800,1800]
+    print(730)
 
 #%%==================2D COLOUR HISTOGRAM===============================
 import matplotlib.pyplot as plt
@@ -275,7 +341,7 @@ plt.figure()
 plt.imshow(np.log(gb+1),origin="lower")
 plt.show()
 
-#%%
+#%%========================COLOUR SPACE PLOTS===========================
 from PIL import Image, ImageFile
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 pxval = np.zeros((10000,numimg,3))
@@ -309,3 +375,29 @@ plt.imshow(np.log(gb+1),origin="lower")
 plt.xlabel("g")
 plt.ylabel("b")
 plt.show()
+#%% ==========================Moving average for red band====================================
+from PIL import Image, ImageFile
+ImageFile.LOAD_TRUNCATED_IMAGES = True
+redval = np.zeros((numimg),dtype=np.uint8)
+for i in range(numimg):
+    indx = i*3
+    redval[i]=plt.imread(mypath+sort[2,indx])[1500,1500].astype(np.uint8)
+
+
+movingavgpx = np.zeros(numimg-60)
+for i in range(numimg-60):
+    movingavgpx[i]=np.sum(redval[i:i+60])/60
+movingavgpx = np.pad(movingavgpx,30,mode="edge")
+#%%
+plt.plot(redval,'b-')
+plt.plot(movingavgpx,'r-')
+std=np.std(redval)
+plt.plot(movingavgpx+1.5*std,'g')
+plt.plot(movingavgpx-1*std,'g')
+
+#%%
+%matplotlib qt
+plt.plot(pxval)
+plt.plot(movingavgpx,'r')
+
+#%%
