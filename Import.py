@@ -79,7 +79,7 @@ from skimage.filters import gaussian
 from skimage.segmentation import active_contour
 
 import argparse
-
+#%%
 image = #IMAGE GOES HERE
 
 #Change the image array shape into q,3 rather than x,y,3
@@ -122,10 +122,10 @@ plt.axis("off")
 plt.show()
 #%%=============================SLIC=================================
 #define constants
-numSp =20 #number of superpixels
-c=0.1      #colour weight
-sigma =0 #factor for pre-processing gaussian blur
-image = compound1
+numSp =25 #number of superpixels
+c=1      #colour weight
+sigma =3 #factor for pre-processing gaussian blur
+image = img
 #calculate superpixel labels
 segments =slic(image,n_segments=numSp,compactness=c,sigma=sigma,enforce_connectivity=False,max_size_factor=3)
 #post processing step changes all values in a superpixel to mean value
@@ -227,6 +227,8 @@ weeks=numimg/10
 weekstack = np.zeros((3712,3712,3))
 redval = np.zeros((3712,3712,60),dtype=np.uint8)
 weekweights = np.zeros((3712,3712),dtype=np.uint8)
+months = 30*np.arange(23)+60
+month=0
 
 #first window initial average
 for j in range(60):
@@ -234,8 +236,8 @@ for j in range(60):
     redval[:,:,j]=plt.imread(mypath+sort[2,i]).astype(np.uint8)
     print(i)
 
-for j in range(60):
-    i = (j+180)*3
+for j in range(numimg):
+    i = (j+0)*3
     dayimg=np.array([plt.imread(mypath+sort[2,i]),
                     plt.imread(mypath+sort[2,i+1]),
                     plt.imread(mypath+sort[2,i+2])]).transpose(1,2,0)
@@ -262,7 +264,7 @@ for j in range(60):
         print(730)
 
     reddiff = dayimg[:,:,0]-movingavg
-    rmask = np.logical_or(reddiff<=-2*std[:,:,0],reddiff>=2*std[:,:,1])
+    rmask = np.logical_or(reddiff<=-0.45*std[:,:,0],reddiff>=1*std[:,:,1])
 
     #change this to be the threshold funciton
     gbmask = threshold(dayimg-meanimg,std)
@@ -275,20 +277,27 @@ for j in range(60):
     changes[mask]=0
     weekweights = weekweights + changes
 
-badpx = np.argwhere(weekweights==1)
-weekweightdiv = weekweights
-weekweightdiv[weekweights==0]=1
-weekimg = weekstack/np.repeat(weekweightdiv[:,:,np.newaxis],3,axis=2)
+
+    badpx = np.argwhere(weekweights==1)
+    weekweightdiv = weekweights
+    weekweightdiv[weekweights==0]=1
+    weekimg = weekstack/np.repeat(weekweightdiv[:,:,np.newaxis],3,axis=2)
+
+    if np.any(j == months):
+        wimg = weekimg-np.min(weekimg)
+        img= np.uint8(255*wimg/np.max(wimg))
+        fname = str("month"+month+".png")
+        imsave= Image.fromarray(img)
+        imsave.save("month0.png",format="png")
+
+        month =+1        
+
 #%%
-%matplotlib inline
+%matplotlib qt
 plt.figure(dpi=400)
-wimg = weekimg-np.min(weekimg)
-img= np.uint8(255*wimg/np.max(wimg))
 plt.axis("off")
 plt.imshow(img)
 from PIL import Image
-imsave= Image.fromarray(img)
-imsave.save("month3.png",format="png")
 # %% ================Adapting code to threshold red=============
 import matplotlib.pyplot as plt
 from PIL import Image, ImageFile
@@ -401,3 +410,21 @@ plt.plot(pxval)
 plt.plot(movingavgpx,'r')
 
 #%%
+testimg = np.array([plt.imread(mypath+sort[2,0]),plt.imread(mypath+sort[2,1]),plt.imread(mypath+sort[2,2])]).transpose(1,2,0)
+#first window initial average
+for j in range(60):
+    i = j*3
+    redval[:,:,j]=plt.imread(mypath+sort[2,i]).astype(np.uint8)
+    print(i)
+
+movingavg=np.sum(redval,axis=2)/60
+reddiff = testimg[:,:,0]-movingavg
+rmask = np.logical_or(reddiff<=-0.45*std[:,:,0],reddiff>=1*std[:,:,1])
+implot = testimg
+implot[rmask]=0
+
+%matplotlib qt
+plt.figure(dpi=400)
+plt.imshow(implot,cmap="gray")
+#%%
+
