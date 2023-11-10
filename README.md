@@ -4,7 +4,7 @@ For the IDP  2 week project related to exploring the EUMESAT Data
 We managed to remove clouds and implement a crude biome detection algorithm  
 
 In nearly all scripts you must specify where your dataset images are and where your mean and std arrays are. These are typically done in the first lines with in the mypath and datapath variables.  
-mean and std data along with the EUMETSAT images can be found here - https://uniofnottm-my.sharepoint.com/:f:/g/personal/ppyac18_nottingham_ac_uk/EtGwgYg2k2JOhVmH_0eihxgBg3RlRaqcHbUxF-eJCt1SoA?e=EXhoMR
+If not supplied: mean and std data along with the EUMETSAT images can be found here - https://uniofnottm-my.sharepoint.com/:f:/g/personal/ppyac18_nottingham_ac_uk/EtGwgYg2k2JOhVmH_0eihxgBg3RlRaqcHbUxF-eJCt1SoA?e=EXhoMR
   
 ## What each file and folder does
 Cloud detection.py - Produces a set of 23 images of the weighted average image of the earth over 15 days to remove clouds.  
