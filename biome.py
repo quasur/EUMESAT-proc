@@ -71,7 +71,7 @@ for i in range(23):
     desertmask1 = np.any(groupimg[:,:,:]>0,axis=2)
     forestmask =np.logical_and((groupimg[:,:,0]<=groupimg[:,:,1]+15),desertmask1)
     aridmask =  np.logical_and(~forestmask,desertmask1)
-    desertmask2 = groupimg[:,:,2]>110
+    desertmask2 = groupimg[:,:,2]>100
     curbiome[desertmask1]=1
     curbiome[aridmask]=1
     curbiome[forestmask]=2
@@ -100,5 +100,6 @@ plt.figure(dpi=400)
 plt.axis("off")
 plt.title("Variance of biome")
 plt.imshow(biomechange,aspect=3712/3712)
+plt.savefig("RepIm")
 
 
