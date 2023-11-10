@@ -1,7 +1,14 @@
-#%%=====================CREATE STORTED FILES=============================
+#%%=====================IMPORT USED MODULES=============================
 import numpy as np
 import os
-
+import matplotlib.pyplot as plt
+from PIL import Image, ImageFile
+from skimage.filters import gaussian as blur
+ImageFile.LOAD_TRUNCATED_IMAGES = True
+#%%=====================CREATE STORTED FILES=============================
+#MYPATH IS THE DIRECTORY FOR THE EUMETSAT RAW I,AGE
+#DATAPATH IS THE DIRECTORY FOR THE MEAN AND STD FILES
+#CHANGE THEM FOR THE CODE TO WORK
 mypath = "C:/Users/adamc/Desktop/images/"
 datapath="C:/Users/adamc/Desktop/bigdata/"
 
@@ -32,111 +39,48 @@ sort =props[:,np.lexsort((props[0,:],props[1,:]))]
 
 #time ordered array of idexing: filter, datetime, filename 
 numimg = int(size/3)
-#%%==================PRINT COMPOUND IMAGE====================================
-import matplotlib.pyplot as plt
-%matplotlib qt
+#%%==================SHOW COMPOUND IMAGE====================================
 
-indx = 0
+indx = 300
 green = plt.imread(mypath+sort[2,indx+1])
 red = plt.imread(mypath+sort[2,indx+0])
 blue = plt.imread(mypath+sort[2,indx+2])
 
 
 compound = np.array([red,green,blue]).transpose((1,2,0))
-compound[1500-5:1500+5,2000-5:2000+5]=255
+plt.figure(dpi=400)
+plt.axis("off")
+plt.title
 plt.imshow(compound)
-#%%
-fig,ax = plt.subplots(2,2,dpi=300,figsize=(8,8))
-#plt.subplots_adjust(wspace=-0.01,hspace=.1)
-fig.tight_layout()
-ax[0,0].imshow(red,cmap="gray")
-ax[0,0].axis("off")
-ax[0,0].set_title("IR1.6")
-ax[0,1].imshow(green,cmap="gray")
-ax[0,1].set_title("VIS0.8")
-ax[0,1].axis("off")
-ax[1,0].imshow(blue,cmap="gray")
-ax[1,0].set_title("VIS0.6")
-ax[1,0].axis("off")
-ax[1,1].imshow(compound)
-ax[1,1].axis("off")
-ax[1,1].set_title("Compound image")
-fig.savefig("RepIm/Base Images.png")
-plt.show()
-print(type(compound[1500,1500,1]))
 
 #%%========================PIXEL OVER TIME===========================
-import matplotlib.pyplot as plt
 from PIL import Image, ImageFile
 ImageFile.LOAD_TRUNCATED_IMAGES = True
-
+#initialise array
 pxstk = np.zeros((numimg,3),dtype=np.uint8)
-k=1800
+#import the rgb values of a single pixel throughout the images
 for j in range(numimg):
     i=j*3
     redpx = plt.imread(mypath+sort[2,i])[1500,2000]
     greenpx = plt.imread(mypath+sort[2,i+1])[1500,2000]
     bluepx = plt.imread(mypath+sort[2,i+2])[1500,2000]
     pxstk[j]=np.array([redpx,greenpx,bluepx]).T
-    #print(np.round(i*3/size*100))
-#%%
-%matplotlib inline
-fig,ax = plt.subplots(3,dpi=300,figsize=(15,8))
-plt.subplots_adjust(wspace=-0.01,hspace=0,top=0.95,bottom=0.1)
-fig.suptitle("Pixel (1500,2000) colour vs time")
-ax[0].plot(pxstk[:,0],'r-')
-ax[2].set_xlabel("Image number")
-ax[0].set_ylabel("IR1.6 Intensity")
-ax[1].set_ylabel("VIS0.8 Intensity")
-ax[2].set_ylabel("VIS0.6 Intensity")
 
-ax[0].xaxis.set_tick_params(labelbottom=False)
-ax[1].xaxis.set_tick_params(labelbottom=False)
+#plot the pixel changes
+plt.plot(pxstk[:,0],'r-')
+plt.plot(pxstk[:,1],'r-')
+plt.plot(pxstk[:,2],'r-')
+plt.show()
 
-ax[1].plot(pxstk[:,1],'g-')
-ax[2].plot(pxstk[:,2],'b-')
-fig.savefig("RepIm/PixelTime.png")
-
-#%%==========================CALCULATE STD======================================
-import matplotlib.pyplot as plt
-from PIL import Image, ImageFile
-ImageFile.LOAD_TRUNCATED_IMAGES = True
-meanimg = np.loadtxt(datapath+"meanimg.np").reshape((3712,3712,3)).copy()
-imgstk = np.zeros((3712,3712,3))
-for j in range(numimg):
-    i = j*3
-    diffr = plt.imread(mypath+sort[2,i])
-    diffg = plt.imread(mypath+sort[2,i+1])
-    diffb = plt.imread(mypath+sort[2,i+2])
-    curdiff = np.array([diffr,diffg,diffb]).transpose(1,2,0)-meanimg
-
-    imgstk=imgstk+curdiff
-    if j%5==0:
-        print(j)
-
-imgvar = imgstk**2/(numimg)
-std = np.sqrt(abs(imgvar))
-#%%
-import matplotlib.pyplot as plt
-
-std = np.loadtxt(datapath+"std.np").reshape((3712,3712,3))
-print(np.max(std))
-plt.imshow(np.uint8(std*255))
-
-#%%====================THRESHOLDING USING STD===================================
+#%%Import mean and std values
 meanimg = np.loadtxt(datapath+"meanimg.np").reshape((3712,3712,3))
 stdbase = np.loadtxt(datapath+"std.np").reshape((3712,3712,3))*255
 #%%#==========================GENERATE WEEK IMAGES==================================
-import matplotlib.pyplot as plt
-from PIL import Image, ImageFile
-ImageFile.LOAD_TRUNCATED_IMAGES = True
 
-
-from skimage.filters import gaussian as blur
+#Blur the std using gaussian convolution
 std = blur(stdbase,(3,3),mode="reflect")
 
-testimg = np.array([plt.imread(mypath+sort[2,0]),plt.imread(mypath+sort[2,1]),plt.imread(mypath+sort[2,2])]).transpose(1,2,0)
-diffimg = testimg-meanimg
+#define threshold used for VIS channels
 def threshold(inp,std):
     #crude mask for the red threshold
     #redthresh = np.logical_or(inp[:,:,0]<=-1*std[:,:,0],inp[:,:,0]>=2*std[:,:,1])#,inp[:,:,0]>=10*std[:,:,0])
@@ -145,19 +89,7 @@ def threshold(inp,std):
     gbthresh = np.any(np.array([grethresh,bluthresh]),axis=0)
     return gbthresh
 
-
-#testthresh = threshold(diffimg,std)
-#plt.imshow(np.uint8(std))
-#plt.show()
-#testimg[testthresh]=0
-#plt.figure()
-#plt.imshow(testimg[:,:,:])
-
-
-#meanimg = np.loadtxt(datapath+"meanimg.np").reshape((3712,3712,3)).copy()
-#std = np.loadtxt(datapath+"std.np").reshape((3712,3712,3)).copy()*255
-
-weeks=numimg/10
+#array initialisation 
 weekstack = np.zeros((3712,3712,3))
 redval = np.zeros((3712,3712,60),dtype=np.uint8)
 weekweights = np.zeros((3712,3712),dtype=np.uint8)
@@ -170,14 +102,16 @@ for j in range(60):
     redval[:,:,j]=plt.imread(mypath+sort[2,i]).astype(np.uint8)
     print(i)
 
+#big loop that takes an hour to run
 for j in range(numimg):
     i = (j+0)*3
+    #import the cay image
     dayimg=np.array([plt.imread(mypath+sort[2,i]),
                     plt.imread(mypath+sort[2,i+1]),
                     plt.imread(mypath+sort[2,i+2])]).transpose(1,2,0)
     print(j)
 
-
+    #==================Redpx moving avg===========================
     #the first window repeats for the first 30 avgs
     if j <30:
         movingavg=np.sum(redval,axis=2)/60
@@ -196,201 +130,35 @@ for j in range(numimg):
         movingavg=np.sum(redval,axis=2)/60
         #for i in range(30):
         print(730)
-
+    #========================Cloud detection and removal=========================
+    #Cloud mask for red image
     reddiff = dayimg[:,:,0]-movingavg
     rmask = np.logical_or(reddiff<=-0.45*std[:,:,0],reddiff>=1*std[:,:,1])
 
-    #change this to be the threshold funciton
+    #Cloud mask for VIS channels
     gbmask = threshold(dayimg-meanimg,std)
 
+    #cloud removal
     mask = np.logical_or(rmask,gbmask)
     dayimg[mask]=0
     weekstack=weekstack+dayimg
 
+    #number of clouds in each pixel
     changes = np.ones((3712,3712))
     changes[mask]=0
     weekweights = weekweights + changes
 
-
-    #badpx = np.argwhere(weekweights==0)
+    #weighted avg for cloud negation
     weekweightdiv = weekweights
     weekweightdiv[weekweights==0]=1
     weekimg = weekstack/np.repeat(weekweightdiv[:,:,np.newaxis],3,axis=2)
 
+    #save the image every 30 days
     if np.any(j == months-1):
         print("saving data for month: ", month )
         wimg = weekimg-np.min(weekimg)
         img= np.uint8(255*wimg/np.max(wimg))
         fimname = str("monthimg/month"+str(month)+".png")
-        #fdatname = str("monthdata/badpx"+str(month)+".np")
         imsave= Image.fromarray(img)
         imsave.save(fimname,format="png")
-        #np.savetxt(fdatname,badpx)
         month = month +1        
-
-#%%
-%matplotlib qt
-plt.figure(dpi=400)
-plt.axis("off")
-plt.imshow(img)
-from PIL import Image
-
-#%%==================2D COLOUR HISTOGRAM===============================
-import matplotlib.pyplot as plt
-r=plt.imread(mypath+sort[2,0]).ravel()
-g=plt.imread(mypath+sort[2,1]).ravel()
-b=plt.imread(mypath+sort[2,2]).ravel()
-
-rg,xe1,ye1 =np.histogram2d(np.asarray(r),np.asarray(g),bins=173)
-rb,xe2,ye2 =np.histogram2d(np.asarray(r),np.asarray(b),bins=173)
-gb,xe3,ye3 =np.histogram2d(np.asarray(g),np.asarray(b),bins=173)
-
-plt.imshow(np.log(rg+1),origin="lower")
-plt.show()
-plt.figure()
-plt.imshow(np.log(rb+1),origin="lower")
-plt.show()
-plt.figure()
-plt.imshow(np.log(gb+1),origin="lower")
-plt.show()
-
-#%%========================COLOUR SPACE PLOTS===========================
-from PIL import Image, ImageFile
-ImageFile.LOAD_TRUNCATED_IMAGES = True
-pxval = np.zeros((10000,numimg,3))
-for i in range(numimg):
-    indx = i*3
-    pxval[:,i,0]=plt.imread(mypath+sort[2,indx])[1750:1850,1750:1850].ravel()
-    pxval[:,i,1]=plt.imread(mypath+sort[2,indx+1])[1750:1850,1750:1850].ravel()
-    pxval[:,i,2]=plt.imread(mypath+sort[2,indx+2])[1750:1850,1750:1850].ravel()
-#%%
-
-r=pxval[:,:,0].ravel()
-g=pxval[:,:,1].ravel()
-b=pxval[:,:,2].ravel()
-
-rg,xe1,ye1 =np.histogram2d(np.asarray(r),np.asarray(g),bins=173)
-rb,xe2,ye2 =np.histogram2d(np.asarray(r),np.asarray(b),bins=173)
-gb,xe3,ye3 =np.histogram2d(np.asarray(g),np.asarray(b),bins=173)
-
-plt.figure(dpi=400)
-plt.imshow(np.log(rg+1),origin="lower")
-plt.xlabel("r")
-plt.ylabel("g")
-plt.show()
-plt.figure(dpi=400)
-plt.imshow(np.log(rb+1),origin="lower")
-plt.xlabel("r")
-plt.ylabel("b")
-plt.show()
-plt.figure(dpi=400)
-plt.imshow(np.log(gb+1),origin="lower")
-plt.xlabel("g")
-plt.ylabel("b")
-plt.show()
-#%% ==========================Moving average for red band====================================
-from PIL import Image, ImageFile
-ImageFile.LOAD_TRUNCATED_IMAGES = True
-redval = np.zeros((numimg),dtype=np.uint8)
-for i in range(numimg):
-    indx = i*3
-    redval[i]=plt.imread(mypath+sort[2,indx])[1500,1500].astype(np.uint8)
-
-
-movingavgpx = np.zeros(numimg-60)
-for i in range(numimg-60):
-    movingavgpx[i]=np.sum(redval[i:i+60])/60
-movingavgpx = np.pad(movingavgpx,30,mode="edge")
-#%%
-plt.plot(redval,'b-')
-plt.plot(movingavgpx,'r-')
-std=np.std(redval)
-plt.plot(movingavgpx+1.5*std,'g')
-plt.plot(movingavgpx-1*std,'g')
-
-#%%
-%matplotlib qt
-plt.plot(pxval)
-plt.plot(movingavgpx,'r')
-
-#%%
-testimg = np.array([plt.imread(mypath+sort[2,0]),plt.imread(mypath+sort[2,1]),plt.imread(mypath+sort[2,2])]).transpose(1,2,0)
-#first window initial average
-for j in range(60):
-    i = j*3
-    redval[:,:,j]=plt.imread(mypath+sort[2,i]).astype(np.uint8)
-    print(i)
-
-movingavg=np.sum(redval,axis=2)/60
-reddiff = testimg[:,:,0]-movingavg
-rmask = np.logical_or(reddiff<=-0.45*std[:,:,0],reddiff>=1*std[:,:,1])
-implot = testimg
-implot[rmask]=0
-
-%matplotlib qt
-plt.figure(dpi=400)
-plt.imshow(implot,cmap="gray")
-#%%
-meanimg = (np.loadtxt(datapath+"meanimg.np").reshape((3712,3712,3)).copy()).astype(np.uint8)
-std= (np.loadtxt(datapath+"std.np").reshape((3712,3712,3))*255).astype(np.uint8)
-#%%
-fig,ax = plt.subplots(1,2,dpi=300,figsize=(6,3))
-plt.subplots_adjust(wspace=0.01,hspace=0.05,top=0.92,bottom=0,left=0,right=1)
-ax[0].axis("off")
-ax[1].axis("off")
-ax[0].set_title("mean pixel colours")
-ax[1].set_title("standard deviaiton of each pixel")
-ax[0].imshow(meanimg)
-ax[1].imshow(std)
-fig.savefig("RepIm/mean std.png")
-# %% ================Adapting code to threshold red=============
-import matplotlib.pyplot as plt
-from PIL import Image, ImageFile
-ImageFile.LOAD_TRUNCATED_IMAGES = True
-redval = np.zeros((60),dtype=np.uint8)
-#first window initial average
-
-for j in range(60):
-    i = j*3
-    redval[j]=plt.imread(mypath+sort[2,i]).astype(np.uint8)[1500,2000]
-    print(i)
-
-pxstk = np.zeros((numimg,3),dtype=np.uint8)
-redavg = np.zeros(numimg,dtype=np.uint8)
-
-for i in range(numimg):
-    print(i)
-    indx=i*3
-    #the first window repeats for the first 30 avgs
-    if i <30:
-        movingavg=np.sum(redval)/60
-        redavg[i]=movingavg
-        print(30)
-
-    #middle windows
-    #load in one image at a time and shuttle the others off one by one until the last image is loaded
-    elif i >=30 & i<700:
-        #for i in range(numimg-60):
-        indx=(i+60)*3
-        movingavg=np.sum(redval)/60
-        redval[:-1]=redval[1:]
-        redval[-1]=plt.imread(mypath+sort[2,indx]).astype(np.uint8)[1500,2000]
-        redavg[i]=movingavg
-        print(700)
-
-    #pad the other edges for 30 values
-    elif i >= 700:
-        movingavg=np.sum(redval)/60
-        #for i in range(30):
-        redavg[-30+i]=movingavg
-        print(730)
-
-    redpx = plt.imread(mypath+sort[2,indx])[1500,2000]
-    greenpx = plt.imread(mypath+sort[2,indx+1])[1500,2000]
-    bluepx = plt.imread(mypath+sort[2,indx+2])[1500,2000]
-    pxstk[i]=np.array([redpx,greenpx,bluepx]).T
-
-
-#%%
-meanimg = (np.loadtxt(datapath+"meanimg.np").reshape((3712,3712,3)).copy()).astype(np.uint8)
-std= (np.loadtxt(datapath+"std.np").reshape((3712,3712,3))*255).astype(np.uint8)
