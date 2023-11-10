@@ -59,6 +59,7 @@ meanimg = (np.loadtxt('meanimg.np').reshape((3712,3712,3)).copy())
 image = meanimg[:, :, 0]
 
 #%%
+
 #Change the image array shape into q,3 rather than x,y,3
 pxval=meanimg.reshape((-1))
 pxval =np.float32(pxval)
@@ -231,7 +232,6 @@ Kmeans on SLIC
 
 '''
 
-
 test = np.uint8(mask_out)
 #Change the image array shape into q,3 rather than x,y,3
 pxval=test.reshape((-1))
@@ -333,25 +333,18 @@ plt.show()
 #%%
 
 '''
-Further image segmentation
+NDVI sensing
 '''
 
-first_idx = (620, 1600)
-second_idx = (1220, 2960)
+meanimg = (np.loadtxt('meanimg.np').reshape((3712,3712,3)).copy())
+#%%
+from numpy import *
 
-first_slice = slice(first_idx[0], first_idx[1] + 1)
-second_slice = slice(second_idx[0], second_idx[1] + 1)
-
-threshold_output = np.zeros_like(threshold)
-threshold_output[first_slice, second_slice, :] = threshold[first_slice, second_slice, :]
-plt.imshow(np.uint8(threshold_output))
-
-
-plt.figure()
-plt.imshow(np.uint8(threshold), cmap='Greys_r')
-
-indices = np.argwhere(threshold!=0)
-percentage_cover = 100*(len(indices)/(len(np.ndarray.flatten(image))))
+NDVI_image = (meanimg[:, :, 1]-meanimg[:, :, 2])/(meanimg[:, :, 1]+meanimg[:, :, 2])
+where_are_NaNs = isnan(NDVI_image)
+NDVI_image[where_are_NaNs] = 0
+#%%
+plt.imshow(NDVI_image)
 
 
 #%%

@@ -34,6 +34,7 @@ sort =props[:,np.lexsort((props[0,:],props[1,:]))]
 numimg = int(size/3)
 
 #%%==================PRINT COMPOUND IMAGE====================================
+
 import matplotlib.pyplot as plt
 
 
@@ -44,6 +45,7 @@ blue = plt.imread(mypath+sort[2,indx])
 
 
 compound = np.array([red,green,blue]).transpose((1,2,0))
+
 """
 plt.figure(dpi=100)
 plt.imshow(compound)
@@ -53,21 +55,32 @@ print(type(compound[1500,1500,1]))
 """
 
 #%%===========================COLOURSPACE PLOTS====================
-plt.figure(dpi=400)
-plt.scatter(red[1500:2000,:].ravel(),green[1500:2000,:].ravel(),marker=',',s=1,alpha=0.01)
-plt.xlabel("red")
-plt.ylabel("green")
-plt.show()
-plt.figure(dpi=400)
-plt.scatter(red[1500:2000,:].ravel(),blue[1500:2000,:].ravel(),marker=',',s=1,alpha=0.01)
-plt.xlabel("red")
-plt.ylabel("blue")
-plt.show()
-plt.figure(dpi=400)
-plt.scatter(green[:,:].ravel(),blue[:,:].ravel(),marker=',',s=1,alpha=0.01)
-plt.xlabel("green")
-plt.ylabel("blue")
-plt.show()
+fig = plt.figure(dpi=400)
+
+ax1 = plt.axes()
+
+ax1.scatter(red[1500:2000,:].ravel(),green[1500:2000,:].ravel(),marker=',',s=1, alpha=0.01)
+ax1.set_xlabel("IR1.6")
+ax1.set_ylabel("VIS0.8")
+
+#%%
+fig = plt.figure(dpi=400)
+
+ax2 = plt.axes()
+
+ax2.scatter(red[1500:2000,:].ravel(),blue[1500:2000,:].ravel(),marker=',',s=1, alpha=0.01)
+ax2.set_xlabel("IR1.6")
+ax2.set_ylabel("VIS0.6")
+
+#%%
+fig = plt.figure(dpi=400)
+
+ax3 = plt.axes()
+
+ax3.scatter(green[1500:2000, :].ravel(),blue[1500:2000,:].ravel(),marker=',',s=1, alpha=0.01)
+ax3.set_xlabel("VIS0.8")
+ax3.set_ylabel("VIS0.6")
+
 
 #%% =============K MEANS AND SLIC=====================================
 
@@ -249,5 +262,55 @@ plt.plot(x,ones*np.median(pxstk[1,:]),color="green")
 plt.plot(x,ones*np.median(pxstk[2,:]),color="blue")
 plt.show()
 
+#%%
+from PIL import Image, ImageFile
+ImageFile.LOAD_TRUNCATED_IMAGES = True
+pxval = np.zeros((10000,numimg,3))
+for i in range(numimg):
+    indx = i*3
+    pxval[:,i,0]=plt.imread(mypath+sort[2,indx])[1750:1850,1750:1850].ravel()
+    pxval[:,i,1]=plt.imread(mypath+sort[2,indx+1])[1750:1850,1750:1850].ravel()
+    pxval[:,i,2]=plt.imread(mypath+sort[2,indx+2])[1750:1850,1750:1850].ravel()
+    
+#%%    
+
+r=pxval[:,:,0].ravel()
+g=pxval[:,:,1].ravel()
+b=pxval[:,:,2].ravel()
+
+rg,xe1,ye1 =np.histogram2d(np.asarray(r),np.asarray(g),bins=173)
+rb,xe2,ye2 =np.histogram2d(np.asarray(r),np.asarray(b),bins=173)
+gb,xe3,ye3 =np.histogram2d(np.asarray(g),np.asarray(b),bins=173)
+
+plt.figure()
+plt.imshow(np.log(rg+1),origin="lower")
+plt.xlabel("IR1.6")
+plt.ylabel("VIS0.8")
+plt.title('IR1.6 channel against VIS0.8')
+plt.colorbar()
+plt.show()
+
+#%%
+
+fig, axs = plt.subplots(1, 3, figsize=(12, 8))
+fig.subplots_adjust(left=0.05, bottom=0.06, right=0.98, top=0.94, wspace=0.2)
+
+plot1 = axs[0].imshow(np.log(rb+1),origin="lower")
+fig.colorbar(plot1, ax=axs[0], shrink=0.3)
+axs[0].set_title('VIS0.6 against IR1.6')
+axs[0].set_xlabel('IR1.6 value')
+axs[0].set_ylabel('VIS0.6 value')
+
+plot2 = axs[1].imshow(np.log(rg+1),origin="lower")
+fig.colorbar(plot2, ax=axs[1], shrink=0.3)
+axs[1].set_title('VIS0.8 against IR1.6')
+axs[1].set_xlabel('IR1.6 value')
+axs[1].set_ylabel('VIS0.8 value')
+
+plot3 = axs[2].imshow(np.log(gb+1),origin="lower")
+fig.colorbar(plot3, ax=axs[2], shrink=0.3)
+axs[2].set_title('VIS0.8 against VIS0.6')
+axs[2].set_xlabel('VIS0.6 value')
+axs[2].set_ylabel('VIS0.8 value')
 
 

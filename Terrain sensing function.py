@@ -12,13 +12,12 @@ import matplotlib.pyplot as plt
 from skimage.segmentation import slic
 from skimage.color import label2rgb
 
-maskpath = #path of mask image 
-mypath = #path of input image
+
 
 #loading of images 
 
-meanimg = (np.loadtxt(mypath+'meanimg.np').reshape((3712,3712,3)).copy())
-mask = plt.imread(maskpath+'mask.png')[:, :, 0:3]
+meanimg = (np.loadtxt('meanimg.np').reshape((3712,3712,3)).copy())
+mask = plt.imread('mask.png')[:, :, 0:3]
 
 #%%============================DEFINING FUNCTIONS====================
 
@@ -34,6 +33,7 @@ def slic_image(image, mask):
 
     #calculate superpixel labels
     segments =slic(test, n_segments=numSp,compactness=c,sigma=sigma,enforce_connectivity=False,max_size_factor=3,channel_axis=-1)
+    
     #post processing step changes all values in a superpixel to mean value
     out1 = np.uint8(label2rgb(segments, test, kind="avg",bg_label=0))
     
@@ -97,8 +97,25 @@ def kmeans_image(image):
 
 #returns desired images
 output_image = slic_image(meanimg, mask)
-plt.imshow(output_image)
+#%%
 
+fig = plt.figure(dpi=300)
+
+ax1 = fig.add_subplot(1, 2, 1)
+ax2 = fig.add_subplot(1, 2, 2)
+
+ax1.imshow(np.uint8(meanimg))
+ax2.imshow(output_image)
+
+ax1.set_title('Input test image')
+ax1.set_xticks([])
+ax1.set_yticks([])
+
+ax2.set_title('Output from SLIC')
+ax2.set_xticks([])
+ax2.set_yticks([])
+
+#%%
 
 k_means_image = kmeans_image(output_image)
 plt.imshow(k_means_image)

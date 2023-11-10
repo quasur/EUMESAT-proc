@@ -90,12 +90,12 @@ VIS8_image = plt.imread(os.path.join(mypath, VIS8_file))
 VIS6_file = sort[2, 2]
 VIS6_image = plt.imread(os.path.join(mypath, VIS6_file))
 
-red_threshold = cv2.threshold(red_image,100, 255, cv2.THRESH_BINARY)
+ret, red_threshold = cv2.threshold(red_image,100, 255, cv2.THRESH_BINARY)
 ret, VIS8_threshold = cv2.threshold(VIS8_image, 100, 255, cv2.THRESH_BINARY)
 ret, VIS6_threshold = cv2.threshold(VIS6_image, 100, 255, cv2.THRESH_BINARY)
 
 fig = plt.figure()
-plt.subplots_adjust(wspace=0.4, hspace=0.4, top=0.85)
+plt.subplots_adjust(wspace=0.05, hspace=0.25)
 
 ax1 = fig.add_subplot(3, 3, 1)
 ax2 = fig.add_subplot(3, 3, 2)
