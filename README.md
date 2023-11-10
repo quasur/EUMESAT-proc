@@ -1,4 +1,5 @@
 # EUMESAT-proc
+github repo: https://github.com/quasur/EUMESAT-proc  
 For the IDP  2 week project related to exploring the EUMESAT Data  
 We managed to remove clouds and implement a crude biome detection algorithm  
 
