@@ -7,6 +7,10 @@ In nearly all scripts you must specify where your dataset images are and where y
 If not supplied: mean and std data along with the EUMETSAT images can be found here - https://uniofnottm-my.sharepoint.com/:f:/g/personal/ppyac18_nottingham_ac_uk/EtGwgYg2k2JOhVmH_0eihxgBg3RlRaqcHbUxF-eJCt1SoA?e=EXhoMR
   
 ## What each file and folder does
+### Files  
+
+IDP EUMETSAT.pdf -The project report  
+
 Contribution statement.txt - A statement on how workload was distributed and what aspects of the projects we worked on.   
 
 Cloud detection.py - Produces a set of 23 images of the weighted average image of the earth over 15 days to remove clouds.  
