@@ -1,0 +1,5 @@
+######################
+Contribution statement
+######################
+
+We worked equally on the project. We both had large inputs on every aspect of the project, although generally Adam focused more on cloud detection and Alex focused more towards biome detection.   
